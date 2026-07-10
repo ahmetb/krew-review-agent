@@ -50,17 +50,17 @@ The program is designed as a UNIX-style CLI tool to maximize portability (it can
 
 To ensure the LLM succeeds, we employ a "Fat Tool" pattern—abstracting complex multi-step operations into single, robust Go functions. The LLM is provided with the following strict JSON schema of tools:
 
-1. **`fetch_pr_diff(pr_number: int)`**
+1. **`fetch_pr_diff()`**
 
-   * **Description:** Fetches the raw `.diff` of the Pull Request.
+   * **Description:** Fetches the raw `.diff` of the Pull Request that triggered this invocation.
 
-   * **Go Implementation:** Makes an authenticated HTTP GET request to GitHub's pull request diff endpoint.
+   * **Go Implementation:** Makes an authenticated HTTP GET request to GitHub's pull request diff endpoint, using the PR number parsed from the `stdin` payload.
 
-2. **`fetch_plugin_manifest(file_path: string)`**
+2. **`fetch_plugin_manifest(name: string)`**
 
-   * **Description:** Reads the contents of a specific file modified in the PR.
+   * **Description:** Reads the contents of a plugin manifest by plugin name.
 
-   * **Go Implementation:** Validates the `file_path` against directory traversal attacks. Reads the file directly from the GitHub API or the local cloned workspace.
+   * **Go Implementation:** Joins the `name` with the workspace path internally (e.g., `plugins/<name>.yaml`), preventing the LLM from supplying arbitrary paths. Reads the file from the local cloned workspace.
 
 3. **`get_all_existing_plugins()`**
 
@@ -73,6 +73,12 @@ To ensure the LLM succeeds, we employ a "Fat Tool" pattern—abstracting complex
    * **Description:** Submits the final review to the PR. Calling this tool ends the execution loop.
 
    * **Go Implementation:** Makes an HTTP POST to the GitHub API to leave a comment. Sets a flag in the Go loop to cleanly terminate the program.
+
+5. **`noop(reason: string)` [TERMINAL TOOL]**
+
+   * **Description:** Records that the PR event did not result in a review (e.g., the PR doesn't touch `plugins/**`). Calling this tool ends the execution loop without posting anything to GitHub.
+
+   * **Go Implementation:** Logs the `reason` for observability. Sets a flag in the Go loop to cleanly terminate the program.
 
 ## 5. Agent Orchestration Loop (The State Machine)
 
@@ -142,8 +148,8 @@ If the `for` loop index reaches `MAX_ITERATIONS` (e.g., 7), the Go program inter
 
 Because this agent processes untrusted third-party pull requests:
 
-* **No Arbitrary Execution:** The LLM is NEVER given a raw `bash` or `exec` tool. It can only invoke the 4 explicitly defined Go functions.
+* **No Arbitrary Execution:** The LLM is NEVER given a raw `bash` or `exec` tool. It can only invoke the 5 explicitly defined Go functions.
 
-* **Path Sanitization:** Any tool accepting a `file_path` (like `fetch_plugin_manifest`) enforces strict path sanitization (`filepath.Clean` in Go) to prevent relative path escapes outside of the designated `/tmp` workspace.
+* **Path Sanitization:** Tools like `fetch_plugin_manifest` accept only a plugin `name`, not a raw file path. The Go program joins the name with the workspace path internally, preventing the LLM from supplying arbitrary paths or performing directory traversal escapes outside of the designated `/tmp` workspace.
 
 * **Ephemeral State:** By designing the program to ingest `stdin` and exit, we rely on the Cloud Run infrastructure to destroy the container and the `/tmp` disk after every single PR, ensuring zero state leakage between reviews.
