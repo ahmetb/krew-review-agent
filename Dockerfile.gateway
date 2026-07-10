@@ -8,7 +8,7 @@ COPY . .
 RUN CGO_ENABLED=0 go build -trimpath -ldflags='-s -w' -o /out/gateway ./cmd/gateway
 
 # Runtime stage: minimal base with CA certificates for TLS to GCP Pub/Sub.
-# Unlike the agent Dockerfile, git is not needed — the gateway does no cloning.
+# Unlike Dockerfile.agent, git is not needed — the gateway does no cloning.
 FROM alpine:3.20
 RUN apk add --no-cache ca-certificates && update-ca-certificates
 COPY --from=build /out/gateway /usr/local/bin/gateway

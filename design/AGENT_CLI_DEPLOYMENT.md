@@ -101,7 +101,7 @@ for the `cmd/agent` binary on Google Cloud Run. It is a companion to
 
 ### 3.1 Dockerfile
 
-The existing multi-stage `Dockerfile` is used unchanged:
+The existing multi-stage `Dockerfile.agent` is used unchanged:
 
 - **Build stage:** `golang:1.26` — compiles `cmd/agent` with `CGO_ENABLED=0`.
 - **Runtime stage:** `alpine:3.20` with `git` and `ca-certificates` installed
@@ -203,8 +203,7 @@ gcloud artifacts repositories create krew-review-agent \
 ### 6.4 Build & push container image
 
 ```bash
-gcloud builds submit \
-  --tag us-central1-docker.pkg.dev/ahmet-personal-api/krew-review-agent/agent:latest
+gcloud builds submit --config cloudbuild-agent.yaml
 ```
 
 ### 6.5 Deploy Cloud Run service
@@ -274,8 +273,7 @@ gcloud projects add-iam-policy-binding ahmet-personal-api \
 After code changes, rebuild and redeploy:
 
 ```bash
-gcloud builds submit \
-  --tag us-central1-docker.pkg.dev/ahmet-personal-api/krew-review-agent/agent:latest
+gcloud builds submit --config cloudbuild-agent.yaml
 
 gcloud run services update krew-review-agent \
   --region us-central1 \

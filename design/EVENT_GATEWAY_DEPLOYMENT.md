@@ -274,7 +274,7 @@ gcloud pubsub topics add-iam-policy-binding krew-index-github-events \
 ### 7.5 Build & push container image
 
 The gateway uses `Dockerfile.gateway` (separate from the agent's
-`Dockerfile`). Since `gcloud builds submit --tag` uses the default
+`Dockerfile.agent`). Since `gcloud builds submit --tag` uses the default
 `Dockerfile`, the gateway image is built via a Cloud Build config file
 (`cloudbuild-gateway.yaml`) that references `Dockerfile.gateway`:
 
