@@ -181,7 +181,8 @@ include `/label needs-human-review` and `/hold` on standalone lines.
 
 **In every case:**
 
-EVERY PR review comment should end with text:
+EVERY time you use the `submit_review_comment(body)` tool you should append
+this to the message:
 
 ```
 ---
