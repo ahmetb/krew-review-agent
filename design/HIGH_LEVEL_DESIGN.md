@@ -38,7 +38,7 @@ The program is designed as a UNIX-style CLI tool to maximize portability (it can
 
   * `LLM_BASE_URL`: Overridden to point to the AI Gateway.
 
-  * `MAX_ITERATIONS`: (Default: 7) The circuit breaker limit for the agent loop.
+  * `MAX_ITERATIONS`: (Default: 10) The circuit breaker limit for the agent loop.
 
 ### 3.2 Outputs
 
@@ -136,7 +136,7 @@ The program enters a bounded `for` loop, governed by `MAX_ITERATIONS`.
 
 ### 5.3 Circuit Breakers
 
-If the `for` loop index reaches `MAX_ITERATIONS` (e.g., 7), the Go program intervenes to prevent infinite loops (and API cost runaways).
+If the `for` loop index reaches `MAX_ITERATIONS` (e.g., 10), the Go program intervenes to prevent infinite loops (and API cost runaways).
 
 1. The Go program appends a final `Role: User` message: *"CIRCUIT BREAKER: You have reached the maximum allowed tool executions. You must immediately output your findings using the submit_review_comment tool."*
 

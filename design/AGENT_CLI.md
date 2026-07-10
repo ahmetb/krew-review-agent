@@ -87,7 +87,7 @@ implies dry-run. This is intentional to make local iteration safe.
 | `LLM_API_KEY` | yes | — | API key for the LLM provider (OpenAI-compatible). |
 | `LLM_BASE_URL` | yes | — | Base URL for the LLM API (e.g. AI Gateway endpoint). |
 | `LLM_MODEL` | no | `glm-5.2` | Model name passed to the LLM API. |
-| `MAX_ITERATIONS` | no | `7` | Circuit-breaker limit for the agent loop. |
+| `MAX_ITERATIONS` | no | `10` | Circuit-breaker limit for the agent loop. |
 | `LOG_LEVEL` | no | `INFO` | slog level (`DEBUG`, `INFO`, `WARN`, `ERROR`). |
 | `PORT` | no | `8080` | HTTP listen port (Cloud Run contract). Overridden by `--port` if set. |
 

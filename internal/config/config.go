@@ -23,7 +23,7 @@ type Config struct {
 // Defaults applied when the corresponding env var is unset.
 const (
 	DefaultLLMModel     = "glm-5.2"
-	DefaultMaxIter      = 7
+	DefaultMaxIter      = 10
 	DefaultLogLevel     = "INFO"
 	DefaultPort         = 8080
 )

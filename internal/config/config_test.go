@@ -24,8 +24,8 @@ func TestLoadDefaults(t *testing.T) {
 	if cfg.LLMModel != DefaultLLMModel {
 		t.Errorf("model=%q want %q", cfg.LLMModel, DefaultLLMModel)
 	}
-	if cfg.MaxIterations != DefaultMaxIter {
-		t.Errorf("max_iter=%d want %d", cfg.MaxIterations, DefaultMaxIter)
+	if cfg.MaxIterations != 10 {
+		t.Errorf("max_iter=%d want 10", cfg.MaxIterations)
 	}
 	if cfg.LogLevel != DefaultLogLevel {
 		t.Errorf("log_level=%q want %q", cfg.LogLevel, DefaultLogLevel)
@@ -52,7 +52,7 @@ func TestLoadOverrides(t *testing.T) {
 		t.Errorf("model=%q", cfg.LLMModel)
 	}
 	if cfg.MaxIterations != 12 {
-		t.Errorf("max_iter=%d", cfg.MaxIterations)
+		t.Errorf("max_iter=%d want 12", cfg.MaxIterations)
 	}
 	if cfg.LogLevel != "debug" {
 		t.Errorf("log_level=%q", cfg.LogLevel)
