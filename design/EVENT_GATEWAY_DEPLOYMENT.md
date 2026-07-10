@@ -93,6 +93,8 @@ this topic.
   ┌──────────────────────────────────────────────────┐
   │  Event Gateway (Cloud Run)                        │
   │  Service: krew-review-event-gateway               │
+  │  URL:    https://krew-review-event-gateway-       │
+  │          1075231961184.us-central1.run.app        │
   │  Image:  …/krew-review-agent/gateway              │
   │  Ingress: all (public — GitHub must reach it)     │
   │  Auth: allow-unauthenticated (HMAC is the auth)   │
@@ -124,7 +126,7 @@ this topic.
 | Ingress | `all` | GitHub sends webhooks from outside GCP; the endpoint must be publicly reachable. HMAC signature verification is the auth layer. |
 | Authentication | `--allow-unauthenticated` | The gateway is a public webhook endpoint. Anyone can POST to it, but only valid HMAC-signed payloads from the allowed repo are processed; all others are rejected (401/403/202). |
 | Container port | `8080` (default `$PORT`) | Cloud Run contract; binary reads `$PORT`. |
-| CPU | `250m` | Minimal — no LLM, no clone. HTTP parse + Pub/Sub publish only. |
+| CPU | `1000m` | Cloud Run requires CPU >= 1 when concurrency > 1. The gateway is sub-second so actual usage is negligible; cost impact is minimal with scale-to-zero. |
 | Memory | `128Mi` | No git clone, no LLM response buffering. |
 | Concurrency | `10` | Webhook processing is sub-second; high concurrency per instance is fine. |
 | Min instances | `0` | Scale to zero between webhook deliveries. |
@@ -202,7 +204,7 @@ This step is performed manually in the GitHub UI for
 
    | Field | Value |
    |---|---|
-   | Payload URL | `https://krew-review-event-gateway-<hash>-uc.a.run.app/webhook` (the gateway service URL from §7.6 + `/webhook`) |
+   | Payload URL | `https://krew-review-event-gateway-1075231961184.us-central1.run.app/webhook` |
    | Content type | `application/json` |
    | Secret | The value of `GITHUB_WEBHOOK_SECRET` from `.envrc` |
    | SSL verification | Enabled (default) |
@@ -269,26 +271,21 @@ gcloud pubsub topics add-iam-policy-binding krew-index-github-events \
   --role="roles/pubsub.publisher"
 ```
 
-### 7.5 Configure Docker auth for Artifact Registry
-
-```bash
-gcloud auth configure-docker us-central1-docker.pkg.dev
-```
-
-### 7.6 Build & push container image
+### 7.5 Build & push container image
 
 The gateway uses `Dockerfile.gateway` (separate from the agent's
-`Dockerfile`). Cloud Build's `--tag` flag uses the default `Dockerfile`, so
-the gateway image is built and pushed with explicit Docker commands:
+`Dockerfile`). Since `gcloud builds submit --tag` uses the default
+`Dockerfile`, the gateway image is built via a Cloud Build config file
+(`cloudbuild-gateway.yaml`) that references `Dockerfile.gateway`:
 
 ```bash
-docker build -f Dockerfile.gateway \
-  -t us-central1-docker.pkg.dev/ahmet-personal-api/krew-review-agent/gateway:latest .
-
-docker push us-central1-docker.pkg.dev/ahmet-personal-api/krew-review-agent/gateway:latest
+gcloud builds submit --config cloudbuild-gateway.yaml
 ```
 
-### 7.7 Deploy Cloud Run service
+This builds and pushes the image to Artifact Registry in one step. No local
+Docker installation required.
+
+### 7.6 Deploy Cloud Run service
 
 ```bash
 gcloud run deploy krew-review-event-gateway \
@@ -300,7 +297,7 @@ gcloud run deploy krew-review-event-gateway \
   --set-env-vars "GITHUB_WEBHOOK_SECRET=${GITHUB_WEBHOOK_SECRET},GCP_PROJECT_ID=ahmet-personal-api,PUBSUB_TOPIC=krew-index-github-events" \
   --timeout 10 \
   --memory 128Mi \
-  --cpu 250m \
+  --cpu 1000m \
   --concurrency 10 \
   --min-instances 0 \
   --max-instances 2 \
@@ -310,10 +307,10 @@ gcloud run deploy krew-review-event-gateway \
 > Note the service URL from the deploy output — it is needed for the GitHub
 > webhook configuration in §6.
 
-### 7.8 Configure the GitHub webhook
+### 7.7 Configure the GitHub webhook
 
 Follow the steps in [§6](#6-github-webhook-configuration) to add the
-webhook to `kubernetes-sigs/krew-index`, using the service URL from §7.7
+webhook to `kubernetes-sigs/krew-index`, using the service URL from §7.6
 as the Payload URL.
 
 ---
@@ -323,10 +320,7 @@ as the Payload URL.
 After code changes to the gateway, rebuild and redeploy:
 
 ```bash
-docker build -f Dockerfile.gateway \
-  -t us-central1-docker.pkg.dev/ahmet-personal-api/krew-review-agent/gateway:latest .
-
-docker push us-central1-docker.pkg.dev/ahmet-personal-api/krew-review-agent/gateway:latest
+gcloud builds submit --config cloudbuild-gateway.yaml
 
 gcloud run services update krew-review-event-gateway \
   --region us-central1 \
