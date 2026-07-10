@@ -64,7 +64,7 @@ To ensure the LLM succeeds, we employ a "Fat Tool" pattern—abstracting complex
 
 3. **`get_all_existing_plugins()`**
 
-   * **Description:** Returns a condensed list of all currently approved plugins (Name and Description) for duplicate comparison.
+   * **Description:** Returns a condensed list of all currently approved plugins (Name, shortDescription, and full Description) for duplicate comparison. Descriptions are flattened to a single line (newlines collapsed to spaces) in `name: shortDescription | description` format.
 
    * **Go Implementation (Fat Tool):** The LLM just calls this tool. Under the hood, the Go program checks if a `/tmp/krew-index` exists. If not, it executes `git clone --depth 1 <repo> /tmp/krew-index`. It then parses all YAML files in the directory, concatenates the names and descriptions, and returns the compiled string to the LLM.
 

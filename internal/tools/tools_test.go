@@ -11,9 +11,9 @@ import (
 
 // stubGH is a test double for GitHubClient.
 type stubGH struct {
-	diff  string
+	diff    string
 	diffErr error
-	posted string
+	posted  string
 	postErr error
 }
 
@@ -115,25 +115,59 @@ func TestFetchPluginManifestEnsureFails(t *testing.T) {
 
 func TestGetAllPlugins(t *testing.T) {
 	c := newCloneWithFake(t, map[string]string{
-		"whoami":  "name: whoami\nshortDescription: Show identity\n",
-		"rbac-lookup": "name: rbac-lookup\nshortDescription: RBAC lookup\n",
+		"whoami":      "apiVersion: krew.googlecontainertools.github.com/v1alpha2\nkind: Plugin\nmetadata:\n  name: whoami\nspec:\n  shortDescription: Show identity\n  description: Shows the current user.\n",
+		"rbac-lookup": "apiVersion: krew.googlecontainertools.github.com/v1alpha2\nkind: Plugin\nmetadata:\n  name: rbac-lookup\nspec:\n  shortDescription: RBAC lookup\n  description: Find roles attached to a subject.\n",
 	})
 	tool := NewGetAllPlugins(c)
 	got, err := tool.Run(context.Background(), "", false)
 	if err != nil {
 		t.Fatalf("Run: %v", err)
 	}
-	if !strings.Contains(got, "whoami: Show identity") {
+	if !strings.Contains(got, "whoami: Show identity | Shows the current user.") {
 		t.Errorf("missing whoami: %q", got)
 	}
-	if !strings.Contains(got, "rbac-lookup: RBAC lookup") {
+	if !strings.Contains(got, "rbac-lookup: RBAC lookup | Find roles attached to a subject.") {
 		t.Errorf("missing rbac-lookup: %q", got)
+	}
+}
+
+func TestGetAllPluginsCollapsesDescriptionNewlines(t *testing.T) {
+	c := newCloneWithFake(t, map[string]string{
+		"multiline": "apiVersion: krew.googlecontainertools.github.com/v1alpha2\nkind: Plugin\nmetadata:\n  name: multiline\nspec:\n  shortDescription: short\n  description: \"First line.\\nSecond line.\"\n",
+	})
+	tool := NewGetAllPlugins(c)
+	got, err := tool.Run(context.Background(), "", false)
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if strings.Contains(got, "First line.\n") {
+		t.Errorf("description newlines not collapsed: %q", got)
+	}
+	if !strings.Contains(got, "multiline: short | First line. Second line.") {
+		t.Errorf("missing collapsed description: %q", got)
+	}
+}
+
+func TestGetAllPluginsEmptyDescription(t *testing.T) {
+	c := newCloneWithFake(t, map[string]string{
+		"nodesy": "apiVersion: krew.googlecontainertools.github.com/v1alpha2\nkind: Plugin\nmetadata:\n  name: nodesy\nspec:\n  shortDescription: just short\n",
+	})
+	tool := NewGetAllPlugins(c)
+	got, err := tool.Run(context.Background(), "", false)
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if !strings.Contains(got, "nodesy: just short\n") {
+		t.Errorf("missing nodesy without separator: %q", got)
+	}
+	if strings.Contains(got, "|") {
+		t.Errorf("separator should be omitted when description is empty: %q", got)
 	}
 }
 
 func TestGetAllPluginsSkipsInvalidYAML(t *testing.T) {
 	c := newCloneWithFake(t, map[string]string{
-		"good": "name: good\nshortDescription: ok\n",
+		"good": "apiVersion: krew.googlecontainertools.github.com/v1alpha2\nkind: Plugin\nmetadata:\n  name: good\nspec:\n  shortDescription: ok\n  description: A good plugin.\n",
 		"bad":  "::: not valid yaml :::\n  - broken",
 	})
 	// Materialize the clone so the plugins directory exists, then add a
@@ -149,7 +183,7 @@ func TestGetAllPluginsSkipsInvalidYAML(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Run: %v", err)
 	}
-	if !strings.Contains(got, "good: ok") {
+	if !strings.Contains(got, "good: ok | A good plugin.") {
 		t.Errorf("missing good: %q", got)
 	}
 	if strings.Contains(got, "bad:") {

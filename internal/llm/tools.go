@@ -57,7 +57,7 @@ func ToolParams() []openai.ChatCompletionToolParam {
 		{
 			Function: shared.FunctionDefinitionParam{
 				Name:        ToolGetAllPlugins,
-				Description: openai.String("Returns a list of all currently approved plugins in the krew-index as 'name: shortDescription' lines. Use to detect duplicate functionality."),
+				Description: openai.String("Returns a list of all currently approved plugins in the krew-index as 'name: shortDescription | description' lines (description newlines collapsed to spaces). Use to detect duplicate functionality."),
 				Parameters:  NoParams,
 			},
 		},

@@ -411,9 +411,18 @@ the descriptions in `HIGH_LEVEL_DESIGN.md` §4 and `SYSTEM_PROMPT.md`.
      `os.TempDir()/krew-index` (see [§8.3.1](#831-clone-management)).
   2. If not, run `git clone --depth 1 https://github.com/kubernetes-sigs/krew-index <path>`.
   3. Read all `plugins/*.yaml` files.
-  4. Parse each YAML, extract `name` and `shortDescription`.
-  5. Concatenate into a single string: `name: shortDescription` per line.
+  4. Parse each YAML, extract `metadata.name`, `spec.shortDescription`, and
+     `spec.description`. (Krew manifests nest these under `metadata`/`spec`.)
+  5. Collapse `description` newlines to spaces and concatenate into a single
+     string: `name: shortDescription | description` per line (the ` | `
+     separator is omitted when `description` is empty).
   6. Return the compiled string.
+
+  > **Payload size note:** Including the full `description` (~6x larger than
+  > `shortDescription`-only, ~33K tokens for ~386 plugins) is an accepted
+  > trade-off: it lets the LLM compare a new submission's functionality
+  > against the full description of existing plugins rather than just the
+  > one-line `shortDescription`, materially improving duplicate detection.
 - **Dry-run:** same (read-only).
 
 #### 8.3.1 Clone Management

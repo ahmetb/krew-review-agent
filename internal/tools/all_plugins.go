@@ -25,15 +25,24 @@ func NewGetAllPlugins(clone *Clone) *GetAllPlugins {
 func (t *GetAllPlugins) Name() string   { return "get_all_existing_plugins" }
 func (t *GetAllPlugins) Terminal() bool { return false }
 
-// pluginManifest captures the name and shortDescription fields from a krew
-// plugin manifest YAML file.
+// pluginManifest captures the metadata.name, spec.shortDescription and
+// spec.description fields from a krew plugin manifest YAML file. Krew
+// manifests nest these fields under metadata/spec rather than at the top
+// level, so the struct mirrors that layout.
 type pluginManifest struct {
-	Name            string `yaml:"name"`
-	ShortDescription string `yaml:"shortDescription"`
+	Metadata struct {
+		Name string `yaml:"name"`
+	} `yaml:"metadata"`
+	Spec struct {
+		ShortDescription string `yaml:"shortDescription"`
+		Description      string `yaml:"description"`
+	} `yaml:"spec"`
 }
 
 // Run clones (if needed), reads every plugins/*.yaml manifest, and returns a
-// compiled "name: shortDescription" listing.
+// compiled "name: shortDescription | description" listing (description
+// newlines are collapsed to spaces; the " | " separator is omitted when
+// description is empty).
 func (t *GetAllPlugins) Run(ctx context.Context, args string, dryRun bool) (string, error) {
 	if args != "" && args != "null" && args != "{}" {
 		var v map[string]any
@@ -65,10 +74,15 @@ func (t *GetAllPlugins) Run(ctx context.Context, args string, dryRun bool) (stri
 			// Skip manifests that don't parse; don't fail the whole listing.
 			continue
 		}
-		if m.Name == "" {
+		if m.Metadata.Name == "" {
 			continue
 		}
-		fmt.Fprintf(&sb, "%s: %s\n", m.Name, m.ShortDescription)
+		desc := strings.ReplaceAll(m.Spec.Description, "\n", " ")
+		if desc != "" {
+			fmt.Fprintf(&sb, "%s: %s | %s\n", m.Metadata.Name, m.Spec.ShortDescription, desc)
+		} else {
+			fmt.Fprintf(&sb, "%s: %s\n", m.Metadata.Name, m.Spec.ShortDescription)
+		}
 		count++
 	}
 	if count == 0 {

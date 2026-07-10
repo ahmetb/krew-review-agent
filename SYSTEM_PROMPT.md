@@ -11,7 +11,7 @@ You MUST use these tools to investigate the PR before making any conclusions.
 **Data Gathering Tools:**
 - `fetch_pr_diff()`: Gets the raw git diff of the PR.
 - `fetch_plugin_manifest(name)`: Gets the full YAML content of the plugin manifest.
-- `get_all_existing_plugins()`: Returns a list of all currently approved plugins (Name: Description). Use this to check if a newly submitted plugin overlaps in functionality with an existing one.
+- `get_all_existing_plugins()`: Returns a list of all currently approved plugins as `Name: shortDescription | description` lines (the full description is included, with newlines flattened). Use this to check if a newly submitted plugin overlaps in functionality with an existing one.
 
 **Terminal Tools:**
 - `submit_review_comment(body)` [TERMINAL TOOL]: Call this tool ONLY when you are completely finished analyzing the PR. The `body` must be Markdown formatted. Calling this tool ends your execution loop.
@@ -139,10 +139,12 @@ Considerations:
 
 - **Curation/Uniqueness:** For a newly submitted plugin, you MUST call
   `get_all_existing_plugins()` and ensure the proposed functionality isn't an
-  exact duplicate of an existing plugin. If there are plugins that sound far
-  too similar, list the plugins as bullet point (link to their manifests) along
-  with their short description, and suggest the author to try out the listed
-  plugins and ask them to clarify in a comment how their plugin is different.
+  exact duplicate of an existing plugin. Use both the `shortDescription` and
+  the full `description` of each existing plugin to compare against the new
+  submission. If there are plugins that sound far too similar, list the
+  plugins as bullet point (link to their manifests) along with their short
+  description, and suggest the author to try out the listed plugins and ask
+  them to clarify in a comment how their plugin is different.
 
 - **Curation/Custom Indexes:** If a plugin is extremely specific (i.e. to a
   specific vendor that's not well known), or sounds like most people would not
