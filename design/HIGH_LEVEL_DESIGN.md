@@ -44,7 +44,7 @@ The program is designed as a UNIX-style CLI tool to maximize portability (it can
 
 * **Stdout/Stderr:** Emits structured JSON logs (`log/slog`) containing trace IDs, iteration counts, and tool execution statuses.
 
-* **GitHub API:** Submits exactly one HTTP POST request to the GitHub Issues API to leave the final review comment (including slash commands like `/lgtm`).
+* **GitHub API:** Submits exactly one HTTP POST request to the GitHub Issues API to leave the final review comment (including slash commands like `/lgtm`). When `needs_human_review` is true, also issues one HTTP POST to the GitHub Issues Labels API to add the `needs-human-review` label.
 
 ## 4. Tool Definitions (The "Fat Tool" Pattern)
 
@@ -68,11 +68,11 @@ To ensure the LLM succeeds, we employ a "Fat Tool" pattern—abstracting complex
 
    * **Go Implementation (Fat Tool):** The LLM just calls this tool. Under the hood, the Go program checks if a `/tmp/krew-index` exists. If not, it executes `git clone --depth 1 <repo> /tmp/krew-index`. It then parses all YAML files in the directory, concatenates the names and descriptions, and returns the compiled string to the LLM.
 
-4. **`submit_review_comment(body: string)` [TERMINAL TOOL]**
+4. **`submit_review_comment(body: string, needs_human_review: bool)` [TERMINAL TOOL]**
 
-   * **Description:** Submits the final review to the PR. Calling this tool ends the execution loop.
+   * **Description:** Submits the final review to the PR. Calling this tool ends the execution loop. When `needs_human_review` is true, the `needs-human-review` label is added to the PR after the comment is posted (replacing the old `/label needs-human-review` Prow text command).
 
-   * **Go Implementation:** Makes an HTTP POST to the GitHub API to leave a comment. Sets a flag in the Go loop to cleanly terminate the program.
+   * **Go Implementation:** Makes an HTTP POST to the GitHub API to leave a comment. If `needs_human_review` is true, makes a second HTTP POST to the GitHub Issues Labels API to add the `needs-human-review` label. Sets a flag in the Go loop to cleanly terminate the program.
 
 5. **`noop(reason: string)` [TERMINAL TOOL]**
 

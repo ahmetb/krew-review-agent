@@ -194,7 +194,7 @@ func (a *Agent) circuitBreak(ctx context.Context, hist *MessageHistory) (Outcome
 	if !ok {
 		return OutcomeError, errors.New("submit_review_comment tool not registered")
 	}
-	args, err := json.Marshal(map[string]string{"body": a.fallback})
+	args, err := json.Marshal(map[string]any{"body": a.fallback, "needs_human_review": true})
 	if err != nil {
 		return OutcomeError, fmt.Errorf("encoding fallback body: %w", err)
 	}

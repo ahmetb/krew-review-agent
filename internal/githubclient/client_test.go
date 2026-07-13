@@ -97,3 +97,36 @@ func TestPostCommentFailure(t *testing.T) {
 		t.Fatal("expected error for 500")
 	}
 }
+
+func TestAddLabel(t *testing.T) {
+	var gotPath, gotMethod string
+	var body map[string][]string
+	c, _ := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		gotPath = r.URL.Path
+		gotMethod = r.Method
+		_ = json.NewDecoder(r.Body).Decode(&body)
+		w.WriteHeader(http.StatusCreated)
+	})
+	if err := c.AddLabel(context.Background(), "o", "r", 7, "needs-human-review"); err != nil {
+		t.Fatalf("AddLabel: %v", err)
+	}
+	if gotPath != "/repos/o/r/issues/7/labels" {
+		t.Errorf("path=%q", gotPath)
+	}
+	if gotMethod != http.MethodPost {
+		t.Errorf("method=%q", gotMethod)
+	}
+	if len(body["labels"]) != 1 || body["labels"][0] != "needs-human-review" {
+		t.Errorf("labels=%v", body)
+	}
+}
+
+func TestAddLabelFailure(t *testing.T) {
+	c, _ := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+		io.WriteString(w, `{"message":"Not Found"}`)
+	})
+	if err := c.AddLabel(context.Background(), "o", "r", 1, "needs-human-review"); err == nil {
+		t.Fatal("expected error for 404")
+	}
+}

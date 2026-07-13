@@ -157,3 +157,18 @@ func (c *Client) PostComment(ctx context.Context, owner, repo string, prNumber i
 	}
 	return nil
 }
+
+// AddLabel adds a label to a pull request (issue). It calls
+// POST /repos/{owner}/{repo}/issues/{number}/labels with the given label name.
+// This adds the label to the issue's existing labels (it does not replace them).
+func (c *Client) AddLabel(ctx context.Context, owner, repo string, prNumber int, label string) error {
+	path := fmt.Sprintf("/repos/%s/%s/issues/%d/labels", owner, repo, prNumber)
+	payload, err := json.Marshal(map[string][]string{"labels": {label}})
+	if err != nil {
+		return fmt.Errorf("encoding label payload: %w", err)
+	}
+	if _, _, err := c.do(ctx, http.MethodPost, path, nil, payload); err != nil {
+		return err
+	}
+	return nil
+}

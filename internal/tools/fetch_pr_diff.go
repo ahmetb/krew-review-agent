@@ -18,6 +18,7 @@ type FetchPRDiff struct {
 type GitHubClient interface {
 	FetchPRDiff(ctx context.Context, owner, repo string, prNumber int) (string, error)
 	PostComment(ctx context.Context, owner, repo string, prNumber int, body string) error
+	AddLabel(ctx context.Context, owner, repo string, prNumber int, label string) error
 }
 
 // NewFetchPRDiff builds a fetch_pr_diff tool for the given PR.

@@ -35,6 +35,26 @@ func StringParam(name, description string) shared.FunctionParameters {
 	}
 }
 
+// BodyWithReviewFlag describes the parameters for submit_review_comment: a
+// required string body and an optional boolean needs_human_review flag.
+func BodyWithReviewFlag() shared.FunctionParameters {
+	return shared.FunctionParameters{
+		"type": "object",
+		"properties": map[string]any{
+			"body": map[string]any{
+				"type":        "string",
+				"description": "The Markdown body of the review comment.",
+			},
+			"needs_human_review": map[string]any{
+				"type":        "boolean",
+				"description": "If true, adds the \"needs-human-review\" label to the PR after posting the comment. Use this instead of including /label needs-human-review in the comment body.",
+				"default":     false,
+			},
+		},
+		"required": []string{"body"},
+	}
+}
+
 // ToolParams returns the OpenAI-compatible tool/function definitions passed to
 // the LLM on every chat completion call. The set and shapes match the tool
 // implementations in internal/tools.
@@ -64,8 +84,8 @@ func ToolParams() []openai.ChatCompletionToolParam {
 		{
 			Function: shared.FunctionDefinitionParam{
 				Name:        ToolSubmitReviewComment,
-				Description: openai.String("Submits the final Markdown review comment to the pull request. This is a TERMINAL tool: calling it ends the review loop."),
-				Parameters:  StringParam("body", "The Markdown body of the review comment."),
+				Description: openai.String("Submits the final Markdown review comment to the pull request. When needs_human_review is true, also adds the \"needs-human-review\" label to the PR. This is a TERMINAL tool: calling it ends the review loop."),
+				Parameters:  BodyWithReviewFlag(),
 			},
 		},
 		{

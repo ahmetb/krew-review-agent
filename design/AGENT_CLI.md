@@ -251,9 +251,9 @@ based on mode). Behavior:
 | `fetch_pr_diff` | Real GitHub API call (read-only). |
 | `fetch_plugin_manifest` | Real filesystem read from the clone (read-only). |
 | `get_all_existing_plugins` | Real `git clone` / filesystem read (read-only). |
-| `submit_review_comment` | **Intercepted:** no GitHub POST. Comment body printed to stdout and logged. |
+| `submit_review_comment` | **Intercepted:** no GitHub POST. Comment body printed to stdout and logged. If `needs_human_review` is true, the label addition is also simulated by logging it (and printing a marker to stdout); no label API call is made. |
 | `noop` | Logged as usual (no side effects either way). |
-| Circuit-breaker fallback comment | **Intercepted:** same as `submit_review_comment` — printed + logged, not posted. |
+| Circuit-breaker fallback comment | **Intercepted:** same as `submit_review_comment` — printed + logged, not posted. Label addition also simulated. |
 
 ### 5.3 Output Surfacing
 
@@ -266,8 +266,13 @@ When `submit_review_comment` (or the fallback) is intercepted in dry-run:
    <body>
    --- end review comment ---
    ```
-2. The body is also emitted via `slog` as a structured log field for
-   consistency with production logging.
+2. If `needs_human_review` is true, an additional marker is written to **stdout**
+   indicating the label would be applied:
+   ```
+   --- would add label: needs-human-review (dry-run, not applied) ---
+   ```
+3. The body and label action are also emitted via `slog` as structured log
+   fields for consistency with production logging.
 
 All other logging (iteration counts, tool calls, LLM request/response metadata)
 goes to stderr via `slog`, same as production.
@@ -437,14 +442,35 @@ the descriptions in `HIGH_LEVEL_DESIGN.md` §4 and `SYSTEM_PROMPT.md`.
   filesystem is destroyed after the instance scales down. For local re-runs,
   the existing clone is reused (fast iteration).
 
-### 8.4 `submit_review_comment(body: string)` [TERMINAL]
+### 8.4 `submit_review_comment(body: string, needs_human_review: bool)` [TERMINAL]
 
-- **LLM signature:** `body` (string) — the Markdown review comment.
-- **Implementation:** authenticated `POST` to the GitHub Issues API
-  (`POST /repos/{owner}/{repo}/issues/{pr_number}/comments`) with the body.
-  Sets the terminal flag to end the loop.
-- **Dry-run:** **intercepted.** No POST. The body is printed to stdout (with
-  delimiters, see [§5.3](#53-output-surfacing)) and logged via `slog`.
+- **LLM signature:**
+  - `body` (string, required) — the Markdown review comment.
+  - `needs_human_review` (boolean, optional, default `false`) — when true,
+    the `needs-human-review` label is added to the PR after the comment is
+    posted. This replaces the old `/label needs-human-review` Prow text
+    command in the comment body. Use this for any review that requires human
+    attention (new plugin submissions, flagged situations). `/hold` remains
+    as a Prow text command in the comment body for highly concerning
+    situations that should block accidental auto-merge.
+- **Implementation:**
+  1. Authenticated `POST` to the GitHub Issues API
+     (`POST /repos/{owner}/{repo}/issues/{pr_number}/comments`) with the
+     body.
+  2. If `needs_human_review` is true, authenticated `POST` to the GitHub
+     labels API (`POST /repos/{owner}/{repo}/issues/{pr_number}/labels`)
+     with `{"labels":["needs-human-review"]}`. This adds the label to the
+     PR's existing labels (does not replace them).
+  3. If the label `POST` fails after the comment was successfully posted,
+     the error is logged but the tool returns success — the comment is
+     already posted and returning an error would cause Pub/Sub to retry and
+     duplicate the comment.
+  4. Sets the terminal flag to end the loop.
+- **Dry-run:** **intercepted.** No `POST` for the comment or the label. The
+  body is printed to stdout (with delimiters, see
+  [§5.3](#53-output-surfacing)) and logged via `slog`. If
+  `needs_human_review` is true, a marker is printed to stdout and the label
+  action is logged via `slog` (instead of an API call).
 
 ### 8.5 `noop(reason: string)` [TERMINAL]
 

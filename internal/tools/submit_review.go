@@ -13,6 +13,9 @@ import (
 const (
 	DryRunCommentStart = "--- review comment (dry-run, not posted) ---"
 	DryRunCommentEnd   = "--- end review comment ---"
+
+	// HumanReviewLabel is the GitHub label added when a PR needs human review.
+	HumanReviewLabel = "needs-human-review"
 )
 
 // SubmitReview implements the submit_review_comment terminal tool.
@@ -37,6 +40,8 @@ func (t *SubmitReview) Name() string    { return "submit_review_comment" }
 func (t *SubmitReview) Terminal() bool  { return true }
 
 // Run posts the comment (production) or intercepts and prints it (dry-run).
+// When needs_human_review is true, it also adds the "needs-human-review" label
+// to the PR (production) or logs it (dry-run).
 //
 // TODO(#14.2): v1 does not deduplicate against existing PR comments, so Pub/Sub
 // at-least-once redelivery may post the same review twice. Candidate fix:
@@ -44,7 +49,8 @@ func (t *SubmitReview) Terminal() bool  { return true }
 // design/AGENT_CLI.md §14.
 func (t *SubmitReview) Run(ctx context.Context, args string, dryRun bool) (string, error) {
 	var p struct {
-		Body string `json:"body"`
+		Body              string `json:"body"`
+		NeedsHumanReview bool  `json:"needs_human_review"`
 	}
 	if err := json.Unmarshal([]byte(args), &p); err != nil {
 		return "", fmt.Errorf("parsing submit_review_comment args: %w", err)
@@ -53,14 +59,28 @@ func (t *SubmitReview) Run(ctx context.Context, args string, dryRun bool) (strin
 		return "", fmt.Errorf("submit_review_comment requires a non-empty body")
 	}
 
+	prRef := fmt.Sprintf("%s/%s#%d", t.rc.Owner, t.rc.Repo, t.rc.PRNumber)
+
 	if dryRun {
 		fmt.Fprintf(t.out, "%s\n%s\n%s\n", DryRunCommentStart, p.Body, DryRunCommentEnd)
+		if p.NeedsHumanReview {
+			fmt.Fprintf(t.out, "--- would add label: %s (dry-run, not applied) ---\n", HumanReviewLabel)
+		}
 		t.logger.Info("submit_review_comment intercepted (dry-run)",
 			"tool", t.Name(),
 			"body", p.Body,
+			"needs_human_review", p.NeedsHumanReview,
 			"dry_run", true,
-			"pr", fmt.Sprintf("%s/%s#%d", t.rc.Owner, t.rc.Repo, t.rc.PRNumber),
+			"pr", prRef,
 		)
+		if p.NeedsHumanReview {
+			t.logger.Info("would add label (dry-run, not applied)",
+				"tool", t.Name(),
+				"label", HumanReviewLabel,
+				"dry_run", true,
+				"pr", prRef,
+			)
+		}
 		return "dry-run: comment not posted", nil
 	}
 
@@ -69,8 +89,28 @@ func (t *SubmitReview) Run(ctx context.Context, args string, dryRun bool) (strin
 	}
 	t.logger.Info("submit_review_comment posted",
 		"tool", t.Name(),
-		"pr", fmt.Sprintf("%s/%s#%d", t.rc.Owner, t.rc.Repo, t.rc.PRNumber),
+		"pr", prRef,
 		"dry_run", false,
 	)
+
+	if p.NeedsHumanReview {
+		if err := t.gh.AddLabel(ctx, t.rc.Owner, t.rc.Repo, t.rc.PRNumber, HumanReviewLabel); err != nil {
+			// The comment was already posted; returning an error would cause
+			// Pub/Sub to retry and duplicate the comment. Log the label failure
+			// and return success.
+			t.logger.Error("failed to add needs-human-review label (comment already posted)",
+				"tool", t.Name(),
+				"label", HumanReviewLabel,
+				"pr", prRef,
+				"error", err,
+			)
+			return "review comment posted; label failed (see logs)", nil
+		}
+		t.logger.Info("needs-human-review label added",
+			"tool", t.Name(),
+			"label", HumanReviewLabel,
+			"pr", prRef,
+		)
+	}
 	return "review comment posted", nil
 }

@@ -11,10 +11,12 @@ import (
 
 // stubGH is a test double for GitHubClient.
 type stubGH struct {
-	diff    string
-	diffErr error
-	posted  string
-	postErr error
+	diff      string
+	diffErr   error
+	posted    string
+	postErr   error
+	labels    []string
+	labelErr  error
 }
 
 func (s *stubGH) FetchPRDiff(ctx context.Context, owner, repo string, pr int) (string, error) {
@@ -24,6 +26,11 @@ func (s *stubGH) FetchPRDiff(ctx context.Context, owner, repo string, pr int) (s
 func (s *stubGH) PostComment(ctx context.Context, owner, repo string, pr int, body string) error {
 	s.posted = body
 	return s.postErr
+}
+
+func (s *stubGH) AddLabel(ctx context.Context, owner, repo string, pr int, label string) error {
+	s.labels = append(s.labels, label)
+	return s.labelErr
 }
 
 func sampleRC() ReviewContext {
@@ -251,6 +258,69 @@ func TestSubmitReviewPostError(t *testing.T) {
 	tool := NewSubmitReview(gh, sampleRC(), &strings.Builder{}, nil)
 	if _, err := tool.Run(context.Background(), `{"body":"x"}`, false); err == nil {
 		t.Fatal("expected post error")
+	}
+}
+
+func TestSubmitReviewNeedsHumanReviewProduction(t *testing.T) {
+	gh := &stubGH{}
+	tool := NewSubmitReview(gh, sampleRC(), &strings.Builder{}, nil)
+	if _, err := tool.Run(context.Background(), `{"body":"please review","needs_human_review":true}`, false); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if gh.posted != "please review" {
+		t.Errorf("posted=%q", gh.posted)
+	}
+	if len(gh.labels) != 1 || gh.labels[0] != "needs-human-review" {
+		t.Errorf("labels=%v want [needs-human-review]", gh.labels)
+	}
+}
+
+func TestSubmitReviewNeedsHumanReviewFalseNoLabel(t *testing.T) {
+	gh := &stubGH{}
+	tool := NewSubmitReview(gh, sampleRC(), &strings.Builder{}, nil)
+	if _, err := tool.Run(context.Background(), `{"body":"approved","needs_human_review":false}`, false); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if len(gh.labels) != 0 {
+		t.Errorf("labels=%v want none", gh.labels)
+	}
+}
+
+func TestSubmitReviewNeedsHumanReviewDryRun(t *testing.T) {
+	gh := &stubGH{}
+	var buf strings.Builder
+	tool := NewSubmitReview(gh, sampleRC(), &buf, nil)
+	got, err := tool.Run(context.Background(), `{"body":"needs check","needs_human_review":true}`, true)
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if len(gh.labels) != 0 {
+		t.Errorf("dry-run must not add label; labels=%v", gh.labels)
+	}
+	out := buf.String()
+	if !strings.Contains(out, DryRunCommentStart) || !strings.Contains(out, "needs check") || !strings.Contains(out, DryRunCommentEnd) {
+		t.Errorf("dry-run output missing delimiters/body:\n%s", out)
+	}
+	if !strings.Contains(out, "needs-human-review") {
+		t.Errorf("dry-run output should mention label:\n%s", out)
+	}
+	if !strings.Contains(got, "dry-run") {
+		t.Errorf("got=%q", got)
+	}
+}
+
+func TestSubmitReviewNeedsHumanReviewLabelFailsReturnsSuccess(t *testing.T) {
+	gh := &stubGH{labelErr: fmt.Errorf("label api down")}
+	tool := NewSubmitReview(gh, sampleRC(), &strings.Builder{}, nil)
+	got, err := tool.Run(context.Background(), `{"body":"check this","needs_human_review":true}`, false)
+	if err != nil {
+		t.Fatalf("expected success despite label failure: %v", err)
+	}
+	if gh.posted != "check this" {
+		t.Errorf("posted=%q", gh.posted)
+	}
+	if !strings.Contains(got, "label failed") {
+		t.Errorf("got=%q should mention label failure", got)
 	}
 }
 

@@ -284,13 +284,17 @@ func TestRunCircuitBreakerFallbackDryRun(t *testing.T) {
 		t.Errorf("submit called %d, want 1 (fallback)", submit.calls)
 	}
 	var fb struct {
-		Body string `json:"body"`
+		Body              string `json:"body"`
+		NeedsHumanReview bool  `json:"needs_human_review"`
 	}
 	if err := json.Unmarshal([]byte(submit.lastArgs), &fb); err != nil {
 		t.Fatalf("fallback args not json: %v", err)
 	}
-	if !strings.Contains(fb.Body, "internal error") || !strings.Contains(fb.Body, "needs-human-review") {
+	if !strings.Contains(fb.Body, "internal error") || !strings.Contains(fb.Body, "/hold") {
 		t.Errorf("fallback body=%q", fb.Body)
+	}
+	if !fb.NeedsHumanReview {
+		t.Errorf("fallback needs_human_review should be true; args=%s", submit.lastArgs)
 	}
 	if !submit.lastDry {
 		t.Errorf("dryRun not propagated to fallback")
