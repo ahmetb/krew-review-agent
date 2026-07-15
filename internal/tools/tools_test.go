@@ -217,7 +217,7 @@ func TestSubmitReviewPostsInProduction(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Run: %v", err)
 	}
-	if gh.posted != "nice PR" {
+	if gh.posted != "nice PR"+botSignatureFooter {
 		t.Errorf("posted=%q", gh.posted)
 	}
 	if !strings.Contains(got, "posted") {
@@ -267,7 +267,7 @@ func TestSubmitReviewNeedsHumanReviewProduction(t *testing.T) {
 	if _, err := tool.Run(context.Background(), `{"body":"please review","needs_human_review":true}`, false); err != nil {
 		t.Fatalf("Run: %v", err)
 	}
-	if gh.posted != "please review" {
+	if gh.posted != "please review"+botSignatureFooter {
 		t.Errorf("posted=%q", gh.posted)
 	}
 	if len(gh.labels) != 1 || gh.labels[0] != "needs-human-review" {
@@ -316,11 +316,44 @@ func TestSubmitReviewNeedsHumanReviewLabelFailsReturnsSuccess(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected success despite label failure: %v", err)
 	}
-	if gh.posted != "check this" {
+	if gh.posted != "check this"+botSignatureFooter {
 		t.Errorf("posted=%q", gh.posted)
 	}
 	if !strings.Contains(got, "label failed") {
 		t.Errorf("got=%q should mention label failure", got)
+	}
+}
+
+func TestSubmitReviewAppendsFooter(t *testing.T) {
+	gh := &stubGH{}
+	tool := NewSubmitReview(gh, sampleRC(), &strings.Builder{}, nil)
+	if _, err := tool.Run(context.Background(), `{"body":"top of comment"}`, false); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if !strings.HasPrefix(gh.posted, "top of comment") {
+		t.Errorf("posted=%q", gh.posted)
+	}
+	if !strings.Contains(gh.posted, "krew-review-agent") {
+		t.Errorf("posted body missing bot footer: %q", gh.posted)
+	}
+	if !strings.HasSuffix(gh.posted, botSignatureFooter) {
+		t.Errorf("posted body should end with footer: %q", gh.posted)
+	}
+}
+
+func TestSubmitReviewAppendsFooterDryRun(t *testing.T) {
+	gh := &stubGH{}
+	var buf strings.Builder
+	tool := NewSubmitReview(gh, sampleRC(), &buf, nil)
+	if _, err := tool.Run(context.Background(), `{"body":"body here"}`, true); err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if gh.posted != "" {
+		t.Errorf("dry-run must not post; posted=%q", gh.posted)
+	}
+	out := buf.String()
+	if !strings.Contains(out, "body here"+botSignatureFooter) {
+		t.Errorf("dry-run output should include footer:\n%s", out)
 	}
 }
 

@@ -454,18 +454,22 @@ the descriptions in `HIGH_LEVEL_DESIGN.md` §4 and `SYSTEM_PROMPT.md`.
     as a Prow text command in the comment body for highly concerning
     situations that should block accidental auto-merge.
 - **Implementation:**
-  1. Authenticated `POST` to the GitHub Issues API
+  1. The tool appends a fixed bot attribution footer to `body` (see
+     `botSignatureFooter` in `internal/tools/submit_review.go`). This keeps
+     the attribution deterministic rather than relying on the LLM to append
+     it from the system prompt.
+  2. Authenticated `POST` to the GitHub Issues API
      (`POST /repos/{owner}/{repo}/issues/{pr_number}/comments`) with the
-     body.
-  2. If `needs_human_review` is true, authenticated `POST` to the GitHub
+     body (footer already appended).
+  3. If `needs_human_review` is true, authenticated `POST` to the GitHub
      labels API (`POST /repos/{owner}/{repo}/issues/{pr_number}/labels`)
      with `{"labels":["needs-human-review"]}`. This adds the label to the
      PR's existing labels (does not replace them).
-  3. If the label `POST` fails after the comment was successfully posted,
+  4. If the label `POST` fails after the comment was successfully posted,
      the error is logged but the tool returns success — the comment is
      already posted and returning an error would cause Pub/Sub to retry and
      duplicate the comment.
-  4. Sets the terminal flag to end the loop.
+  5. Sets the terminal flag to end the loop.
 - **Dry-run:** **intercepted.** No `POST` for the comment or the label. The
   body is printed to stdout (with delimiters, see
   [§5.3](#53-output-surfacing)) and logged via `slog`. If

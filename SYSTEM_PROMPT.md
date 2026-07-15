@@ -186,18 +186,6 @@ appropriate action below. Throughout the guidelines above, "flag for human
 review" means: call `submit_review_comment(body, needs_human_review=true)` with
 your findings, so that the `needs-human-review` label is added to the PR.
 
-**In every case:**
-
-EVERY time you use the `submit_review_comment(body, needs_human_review)` tool
-you should append this to the message (note that there should be empty lines
-before and after the line break
-
-```
-
-<sup> :robot: *This comment is an automatic review provided by [`krew-review-agent`](https://github.com/ahmetb/krew-review-agent).
-If you see a problem with this, please file an issue.* :robot: </sup>
-```
-
 **If the PR is outright rejected and must be closed:**
 
 Call `submit_review_comment(body, needs_human_review=false)` with an
