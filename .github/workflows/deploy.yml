@@ -1,0 +1,77 @@
+name: deploy
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      agent: ${{ steps.filter.outputs.agent }}
+      gateway: ${{ steps.filter.outputs.gateway }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - uses: dorny/paths-filter@6852f92c20ea7fd3b0c25de3b5112db3a98da050
+        id: filter
+        with:
+          filters: |
+            agent:
+              - 'cmd/agent/**'
+              - 'Dockerfile.agent'
+              - 'cloudbuild-agent.yaml'
+              - 'internal/**'
+              - 'go.mod'
+              - 'go.sum'
+              - '.dockerignore'
+            gateway:
+              - 'cmd/gateway/**'
+              - 'Dockerfile.gateway'
+              - 'cloudbuild-gateway.yaml'
+              - 'internal/**'
+              - 'go.mod'
+              - 'go.sum'
+              - '.dockerignore'
+
+  deploy-agent:
+    needs: changes
+    if: needs.changes.outputs.agent == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - uses: google-github-actions/auth@c200f3691d83b41bf9bbd8638997a462592937ed
+        with:
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOY_SA }}
+      - uses: google-github-actions/setup-gcloud@e427ad8a34f8676edf47cf7d7925499adf3eb74f
+      - run: gcloud builds submit --config cloudbuild-agent.yaml
+      - run: |
+          gcloud run services update krew-review-agent \
+            --region ${{ vars.GCP_REGION }} \
+            --image ${{ vars.AR_REPO }}/agent:latest
+
+  deploy-gateway:
+    needs: changes
+    if: needs.changes.outputs.gateway == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - uses: google-github-actions/auth@c200f3691d83b41bf9bbd8638997a462592937ed
+        with:
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOY_SA }}
+      - uses: google-github-actions/setup-gcloud@e427ad8a34f8676edf47cf7d7925499adf3eb74f
+      - run: gcloud builds submit --config cloudbuild-gateway.yaml
+      - run: |
+          gcloud run services update krew-review-event-gateway \
+            --region ${{ vars.GCP_REGION }} \
+            --image ${{ vars.AR_REPO }}/gateway:latest
