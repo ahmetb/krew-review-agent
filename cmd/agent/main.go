@@ -1,5 +1,5 @@
 // Command agent is the entrypoint of the krew-review-agent.
-// It runs in one of two modes selected by CLI flags:
+// It runs in one of two modes, selected by CLI flags:
 //
 //   - Production: a long-lived HTTP server receiving Pub/Sub push deliveries on
 //     $PORT (Cloud Run contract).
