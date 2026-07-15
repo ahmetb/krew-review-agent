@@ -28,7 +28,6 @@ jobs:
             agent:
               - 'cmd/agent/**'
               - 'Dockerfile.agent'
-              - 'cloudbuild-agent.yaml'
               - 'internal/**'
               - 'go.mod'
               - 'go.sum'
@@ -36,7 +35,6 @@ jobs:
             gateway:
               - 'cmd/gateway/**'
               - 'Dockerfile.gateway'
-              - 'cloudbuild-gateway.yaml'
               - 'internal/**'
               - 'go.mod'
               - 'go.sum'
@@ -53,7 +51,9 @@ jobs:
           workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
           service_account: ${{ vars.GCP_DEPLOY_SA }}
       - uses: google-github-actions/setup-gcloud@e427ad8a34f8676edf47cf7d7925499adf3eb74f
-      - run: gcloud builds submit --config cloudbuild-agent.yaml
+      - run: gcloud auth configure-docker ${{ vars.AR_REGISTRY }}
+      - run: docker build -t ${{ vars.AR_REPO }}/agent:latest -f Dockerfile.agent .
+      - run: docker push ${{ vars.AR_REPO }}/agent:latest
       - run: |
           gcloud run services update krew-review-agent \
             --region ${{ vars.GCP_REGION }} \
@@ -70,7 +70,9 @@ jobs:
           workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
           service_account: ${{ vars.GCP_DEPLOY_SA }}
       - uses: google-github-actions/setup-gcloud@e427ad8a34f8676edf47cf7d7925499adf3eb74f
-      - run: gcloud builds submit --config cloudbuild-gateway.yaml
+      - run: gcloud auth configure-docker ${{ vars.AR_REGISTRY }}
+      - run: docker build -t ${{ vars.AR_REPO }}/gateway:latest -f Dockerfile.gateway .
+      - run: docker push ${{ vars.AR_REPO }}/gateway:latest
       - run: |
           gcloud run services update krew-review-event-gateway \
             --region ${{ vars.GCP_REGION }} \
