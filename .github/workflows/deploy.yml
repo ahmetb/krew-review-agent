@@ -31,12 +31,14 @@ jobs:
               - 'go.mod'
               - 'go.sum'
               - '.ko.yaml'
+              - '.github/workflows/deploy.yml'
             gateway:
               - 'cmd/gateway/**'
               - 'internal/**'
               - 'go.mod'
               - 'go.sum'
               - '.ko.yaml'
+              - '.github/workflows/deploy.yml'
 
   deploy-agent:
     needs: changes
