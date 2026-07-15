@@ -23,20 +23,12 @@ strain on a small volunteer reviewer community.
 `krew-review-agent` automates the first pass. When a pull request is opened
 against the Krew index, the agent:
 
-- **Approves straightforward version bumps** automatically (e.g. a PR that only
-  changes `uri`, `sha256`, and `version`), posting a `/lgtm` `/approve` to let
-  it auto-merge.
-- **Closes PRs that clearly violate the rules** — for example, version numbers
-  going backwards, pre-release tags, or bot-submitted new plugins — with a
-  friendly explanation of *why* the rule exists and how to fix it.
-- **Flags anything that needs a human** — new plugin submissions, plugin
-  renames, changes to a plugin's origin repository — by leaving review notes and
-  adding a `needs-human-review` label, so a maintainer can make the final call.
-
-It also checks new submissions against the whole existing index for
-naming-guideline compliance (kebab-case, no `kube-`/`kubectl-` prefixes, no
-overly generic names, and so on) and for functional overlap with plugins that
-are already published.
+- **Approves straightforward version bumps** automatically, so they can
+  auto-merge.
+- **Closes PRs that clearly violate the rules**, with a friendly explanation of
+  *why* the rule exists and how to fix it.
+- **Flags anything that needs a human** — new plugin submissions and other
+  judgment calls — so a maintainer can make the final decision.
 
 The goal is not to replace human judgment on what belongs in a curated index,
 but to handle the mechanical checks and clear-cut cases so a maintainer only
@@ -44,40 +36,13 @@ spends attention where it's genuinely needed.
 
 ## How it works
 
-The heart of the project is an **agentic orchestration loop**, not a rigid
-script. Rather than executing a fixed sequence of checks, the program hands a
-Large Language Model a set of tools and a system prompt (the review guidelines)
-and lets it decide, step by step, what context it needs and when it has seen
-enough to render a verdict.
-
-### The agent loop
-
-The program feeds the LLM the pull request's context and then runs a bounded
-loop:
-
-1. The LLM is asked what to do next.
-2. If it calls one of the data-gathering tools, the Go program runs that tool
-   and feeds the result back into the conversation.
-3. This repeats until the LLM decides it's done and calls a **terminal tool** to
-   either submit its review or record that no review was needed.
-
-A circuit breaker caps the number of iterations so a confused or looping model
-can never run up unbounded API cost — if it hits the limit, it's forced to
-either finish or post a fallback message.
-
-### The tools
-
-The LLM never gets a raw shell or arbitrary file access. It can only invoke a
-small, fixed set of purpose-built Go functions (a "fat tool" pattern, where each
-tool wraps a complete, robust operation):
-
-| Tool | Purpose |
-|---|---|
-| `fetch_pr_diff` | Get the raw diff of the pull request. |
-| `fetch_plugin_manifest` | Read a plugin's current manifest by name. |
-| `get_all_existing_plugins` | List every approved plugin (with descriptions) for duplicate detection. |
-| `submit_review_comment` | **Terminal.** Post the final review, optionally flagging for human review. |
-| `noop` | **Terminal.** Record that the PR needed no review (e.g. it doesn't touch `plugins/`). |
+The heart of the project is a **limited-turn agent loop**, not a rigid script.
+The program hands a Large Language Model a system prompt (the review guidelines)
+and a small, fixed set of tools — reading the PR diff, reading a plugin
+manifest, listing existing plugins, and posting the final review — and lets it
+decide, step by step, what context it needs before rendering a verdict. It never
+gets a shell or arbitrary file access, and a per-review turn limit caps how long
+it can run.
 
 Because the review rules live in a system prompt rather than in code, tuning how
 the agent reviews is mostly a matter of editing prose — see
