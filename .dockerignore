@@ -1,8 +1,0 @@
-# Secrets — must never enter the build context.
-.envrc
-
-# Not needed for building the binary.
-.git/
-design/
-testdata/
-testdarta/

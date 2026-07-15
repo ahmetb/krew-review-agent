@@ -148,13 +148,13 @@ this topic.
 
 ## 4. Container Image
 
-### 4.1 Dockerfile
+### 4.1 `ko` build
 
-`Dockerfile.gateway` (multi-stage):
-- **Build stage:** `golang:1.26` — compiles `cmd/gateway` with
-  `CGO_ENABLED=0`.
-- **Runtime stage:** `alpine:3.20` with `ca-certificates` (for TLS to
-  GCP Pub/Sub). No `git` needed — the gateway does no cloning.
+Images are built with [`ko`](https://github.com/ko-build/ko) — there are no
+Dockerfiles. ko compiles `cmd/gateway` with `CGO_ENABLED=0` and layers the
+static binary onto the default base image (`gcr.io/distroless/static-debian12`,
+which bundles `ca-certificates` for TLS to Pub/Sub). No `git` is needed — the
+gateway does no cloning. The build config lives in `.ko.yaml`.
 
 ### 4.2 Artifact Registry repository
 
@@ -240,8 +240,12 @@ never logged.
 ### 7.1 Prerequisites
 
 - `gcloud` CLI authenticated with access to project `ahmet-personal-api`.
-- APIs enabled: Cloud Run, Cloud Build, Artifact Registry, Pub/Sub (all
-  already enabled in this project).
+- [`ko`](https://github.com/ko-build/ko) installed (`go install
+  github.com/ko-build/ko@latest`).
+- Docker authenticated to Artifact Registry (`gcloud auth configure-docker
+  us-central1-docker.pkg.dev`); ko pushes through the same credentials.
+- APIs enabled: Cloud Run, Artifact Registry, Pub/Sub (all already enabled in
+  this project).
 - Environment variables loaded from `.envrc` (`direnv allow` or
   `source .envrc`).
 - The Pub/Sub topic `krew-index-github-events` already exists (provisioned
@@ -273,17 +277,17 @@ gcloud pubsub topics add-iam-policy-binding krew-index-github-events \
 
 ### 7.5 Build & push container image
 
-The gateway uses `Dockerfile.gateway` (separate from the agent's
-`Dockerfile.agent`). Since `gcloud builds submit --tag` uses the default
-`Dockerfile`, the gateway image is built via a Cloud Build config file
-(`cloudbuild-gateway.yaml`) that references `Dockerfile.gateway`:
+ko compiles `cmd/gateway` and pushes the image to Artifact Registry in one
+step. `--bare` makes ko use `KO_DOCKER_REPO` verbatim as the image name, and
+`--tags=latest` tags it:
 
 ```bash
-gcloud builds submit --config cloudbuild-gateway.yaml
+KO_DOCKER_REPO=us-central1-docker.pkg.dev/ahmet-personal-api/krew-review-agent/gateway \
+  ko build --bare --tags=latest ./cmd/gateway
 ```
 
-This builds and pushes the image to Artifact Registry in one step. No local
-Docker installation required.
+The build flags are read from `.ko.yaml`. No local Docker installation is
+required.
 
 ### 7.6 Deploy Cloud Run service
 
@@ -320,7 +324,8 @@ as the Payload URL.
 After code changes to the gateway, rebuild and redeploy:
 
 ```bash
-gcloud builds submit --config cloudbuild-gateway.yaml
+KO_DOCKER_REPO=us-central1-docker.pkg.dev/ahmet-personal-api/krew-review-agent/gateway \
+  ko build --bare --tags=latest ./cmd/gateway
 
 gcloud run services update krew-review-event-gateway \
   --region us-central1 \
@@ -401,6 +406,6 @@ After completing all deployment steps, verify the full pipeline:
    is never logged. Log fields are limited to metadata (delivery ID,
    event type, action, repo, PR number, outcome).
 
-6. **`.dockerignore` prevents secret leakage:** `.envrc` (which contains
-   the webhook secret and other secrets) is excluded from the Docker build
-   context.
+6. **No source/secrets in the image:** ko layers only the compiled binary
+   onto the base image; the source tree (including `.envrc` with the webhook
+   secret and other secrets) is never copied into the image.

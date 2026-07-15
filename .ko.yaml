@@ -1,0 +1,37 @@
+# ko build configuration for krew-review-agent.
+# Schema: https://github.com/ko-build/ko/blob/main/docs/configuration.md
+#
+# ko compiles each cmd/* binary with `go build` and layers it onto a base
+# image — there are no Dockerfiles. The gateway is a self-contained static
+# binary, so the default distroless base (which bundles ca-certificates for
+# TLS to Pub/Sub) is sufficient.
+#
+# The agent shells out to `git clone` at runtime (internal/tools/clone.go),
+# so its image must ship `git`. ko cannot install packages, so the agent
+# overrides its base with the Chainguard git image, which bundles both git
+# and ca-certificates.
+
+defaultBaseImage: gcr.io/distroless/static-debian12
+
+baseImageOverrides:
+  github.com/ahmetb/krew-review-agent/cmd/agent: cgr.dev/chainguard/git:latest
+
+builds:
+  - id: agent
+    main: ./cmd/agent
+    flags:
+      - -trimpath
+    ldflags:
+      - -s
+      - -w
+    env:
+      - CGO_ENABLED=0
+  - id: gateway
+    main: ./cmd/gateway
+    flags:
+      - -trimpath
+    ldflags:
+      - -s
+      - -w
+    env:
+      - CGO_ENABLED=0

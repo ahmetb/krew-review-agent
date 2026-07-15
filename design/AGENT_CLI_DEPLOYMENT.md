@@ -99,18 +99,29 @@ for the `cmd/agent` binary on Google Cloud Run. It is a companion to
 
 ## 3. Container Image
 
-### 3.1 Dockerfile
+### 3.1 `ko` build
 
-The existing multi-stage `Dockerfile.agent` is used unchanged:
+Images are built with [`ko`](https://github.com/ko-build/ko) — there are no
+Dockerfiles. ko compiles `cmd/agent` with `CGO_ENABLED=0` and layers the
+resulting static binary onto a base image in a single step.
 
-- **Build stage:** `golang:1.26` — compiles `cmd/agent` with `CGO_ENABLED=0`.
-- **Runtime stage:** `alpine:3.20` with `git` and `ca-certificates` installed
-  (design §12.1 OS-level dependencies).
+Because the agent shells out to `git clone` at runtime
+(`internal/tools/clone.go`), its image must ship `git`. ko cannot install
+packages, so the agent overrides its base image to
+`cgr.dev/chainguard/git:latest`, which bundles both `git` and
+`ca-certificates`. This override is declared in `.ko.yaml`:
 
-### 3.2 `.dockerignore`
+```yaml
+defaultBaseImage: gcr.io/distroless/static-debian12
+baseImageOverrides:
+  github.com/ahmetb/krew-review-agent/cmd/agent: cgr.dev/chainguard/git:latest
+```
 
-Excludes `.envrc` (secrets), `.git/`, `design/`, and test data from the build
-context.
+### 3.2 Build context
+
+ko compiles the binary from the Go module and layers only the binary onto the
+base image — no source tree, secrets, or test data are copied into the image.
+`.envrc` (which contains live secrets) therefore can never enter the image.
 
 ### 3.3 Artifact Registry repository
 
@@ -171,8 +182,9 @@ context.
    The ack-deadline (600s) is set to match the Cloud Run timeout to minimize
    mid-review redeliveries.
 
-4. **`.dockerignore` prevents secret leakage:** `.envrc` (which contains live
-   secrets) is excluded from the Docker build context.
+4. **No source/secrets in the image:** ko layers only the compiled binary
+   onto the base image; the source tree (including `.envrc` with live secrets)
+   is never copied into the image, so there is no build context to exclude.
 
 ---
 
@@ -181,8 +193,12 @@ context.
 ### 6.1 Prerequisites
 
 - `gcloud` CLI authenticated with access to project `ahmet-personal-api`.
-- APIs enabled: Cloud Run, Cloud Build, Artifact Registry, Pub/Sub (all
-  already enabled in this project).
+- [`ko`](https://github.com/ko-build/ko) installed (`go install
+  github.com/ko-build/ko@latest`).
+- Docker authenticated to Artifact Registry (`gcloud auth configure-docker
+  us-central1-docker.pkg.dev`); ko pushes through the same credentials.
+- APIs enabled: Cloud Run, Artifact Registry, Pub/Sub (all already enabled in
+  this project).
 - Environment variables loaded from `.envrc` (e.g. `direnv allow` or
   `source .envrc`) for the deploy step.
 
@@ -202,9 +218,17 @@ gcloud artifacts repositories create krew-review-agent \
 
 ### 6.4 Build & push container image
 
+ko compiles `cmd/agent` and pushes the image to Artifact Registry in one step.
+`--bare` makes ko use `KO_DOCKER_REPO` verbatim as the image name, and
+`--tags=latest` tags it:
+
 ```bash
-gcloud builds submit --config cloudbuild-agent.yaml
+KO_DOCKER_REPO=us-central1-docker.pkg.dev/ahmet-personal-api/krew-review-agent/agent \
+  ko build --bare --tags=latest ./cmd/agent
 ```
+
+The base image (`cgr.dev/chainguard/git:latest`) and build flags are read from
+`.ko.yaml` (§3.1).
 
 ### 6.5 Deploy Cloud Run service
 
@@ -273,7 +297,8 @@ gcloud projects add-iam-policy-binding ahmet-personal-api \
 After code changes, rebuild and redeploy:
 
 ```bash
-gcloud builds submit --config cloudbuild-agent.yaml
+KO_DOCKER_REPO=us-central1-docker.pkg.dev/ahmet-personal-api/krew-review-agent/agent \
+  ko build --bare --tags=latest ./cmd/agent
 
 gcloud run services update krew-review-agent \
   --region us-central1 \
