@@ -528,9 +528,14 @@ in the response.
 var systemPrompt string
 ```
 
-The embedded file is located at the module root. The system prompt is **not**
-overridable at runtime; iterating on the prompt requires a rebuild. This keeps
-the production binary self-contained (no external file dependency).
+The embedded file lives in `cmd/agent/`, alongside the package that consumes it.
+This placement is deliberate: CI gates the agent build on a `cmd/agent/**` path
+filter, so keeping the prompt there ensures a prompt-only edit still triggers a
+rebuild and deploy.
+
+The system prompt is **not** overridable at runtime; iterating on the prompt
+requires a rebuild. This keeps the production binary self-contained (no external
+file dependency).
 
 ---
 

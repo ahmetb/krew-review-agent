@@ -18,7 +18,6 @@ import (
 	"os/signal"
 	"syscall"
 
-	systemprompt "github.com/ahmetb/krew-review-agent"
 	"github.com/ahmetb/krew-review-agent/internal/agent"
 	"github.com/ahmetb/krew-review-agent/internal/config"
 	"github.com/ahmetb/krew-review-agent/internal/githubclient"
@@ -83,7 +82,7 @@ func runServer(cfg config.Config, flagPort int, logger *slog.Logger) int {
 		LLM:           llm.NewClient(llm.Config{APIKey: cfg.LLMAPIKey, BaseURL: cfg.LLMBaseURL, Model: cfg.LLMModel}),
 		GH:            githubclient.New(cfg.GitHubToken),
 		Clone:         tools.DefaultKrewIndexClone(),
-		SystemPrompt:  systemprompt.Content,
+		SystemPrompt:  systemPrompt,
 		MaxIterations: cfg.MaxIterations,
 		Logger:        logger,
 		Stdout:        os.Stdout,
@@ -130,7 +129,7 @@ func runTest(cfg config.Config, payloadPath string, logger *slog.Logger) int {
 		LLM:           llm.NewClient(llm.Config{APIKey: cfg.LLMAPIKey, BaseURL: cfg.LLMBaseURL, Model: cfg.LLMModel}),
 		GH:            githubclient.New(cfg.GitHubToken),
 		Clone:         tools.DefaultKrewIndexClone(),
-		SystemPrompt:  systemprompt.Content,
+		SystemPrompt:  systemPrompt,
 		MaxIterations: cfg.MaxIterations,
 		Logger:        rLogger,
 		Stdout:        os.Stdout,

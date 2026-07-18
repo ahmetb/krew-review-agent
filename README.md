@@ -46,7 +46,7 @@ it can run.
 
 Because the review rules live in a system prompt rather than in code, tuning how
 the agent reviews is mostly a matter of editing prose — see
-[`SYSTEM_PROMPT.md`](./SYSTEM_PROMPT.md).
+[`SYSTEM_PROMPT.md`](./cmd/agent/SYSTEM_PROMPT.md).
 
 ### The pipeline
 
