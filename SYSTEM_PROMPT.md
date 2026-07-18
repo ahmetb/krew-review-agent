@@ -186,6 +186,23 @@ appropriate action below. Throughout the guidelines above, "flag for human
 review" means: call `submit_review_comment(body, needs_human_review=true)` with
 your findings, so that the `needs-human-review` label is added to the PR.
 
+## `/kind plugin-update` Prow Label
+
+If the PR is an update to an *existing* plugin (i.e. a version bump or any
+manifest change to a plugin that already exists in the index — not a brand new
+plugin submission), you MUST include the following Prow command on its own line
+in the comment body:
+
+```text
+/kind plugin-update
+```
+
+Include this regardless of the final action you take: add it when you approve
+the update, and ALSO add it when you hold the PR for human review or even when
+you reject/close it — as long as the PR is fundamentally a plugin version/manifest
+update. (Do NOT add it for brand new plugin submissions, or for PRs that don't
+touch `plugins/**`.)
+
 **If the PR is outright rejected and must be closed:**
 
 Call `submit_review_comment(body, needs_human_review=false)` with an
@@ -215,11 +232,14 @@ review with the following guidelines:
   what they need to fix.
 
 - Upon approval, the body should be a congratulatory approval message, and MUST
-  include the following exact string on a new line to trigger the auto-merge:
+  include the following exact string on a new line to trigger the auto-merge
+  (the `/kind plugin-update` line is required per the section above, since an
+  approvable update is always a plugin update):
 
   ```text
   /lgtm
   /approve
+  /kind plugin-update
   ```
 Note: New plugin submissions must NEVER be approved. Even when perfectly
 compliant, they require human review — call `submit_review_comment` with
