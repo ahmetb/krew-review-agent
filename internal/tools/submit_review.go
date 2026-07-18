@@ -23,7 +23,7 @@ const (
 // the LLM) so the attribution is deterministic.
 const botSignatureFooter = `
 
-<sup> :robot: *This comment is an automatic review provided by [` + "`krew-review-agent`" + `(https://github.com/ahmetb/krew-review-agent).
+<sup> :robot: *This comment is an automatic review provided by [` + "`krew-review-agent`" + `(https://github.com/ahmetb/krew-review-agent)].
 If you see a problem with this, please file an issue.* :robot: </sup>`
 
 // SubmitReview implements the submit_review_comment terminal tool.
