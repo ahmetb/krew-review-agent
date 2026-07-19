@@ -56,13 +56,16 @@ jobs:
           service_account: ${{ vars.GCP_DEPLOY_SA }}
       - uses: google-github-actions/setup-gcloud@e427ad8a34f8676edf47cf7d7925499adf3eb74f
       - run: gcloud auth configure-docker ${{ vars.AR_REGISTRY }}
-      - env:
+      - id: build
+        env:
           KO_DOCKER_REPO: ${{ vars.AR_REPO }}/agent
-        run: ko build --bare --tags=latest ./cmd/agent
+        run: |
+          image=$(ko build --bare --tags=${{ github.sha }},latest ./cmd/agent)
+          echo "image=$image" >> "$GITHUB_OUTPUT"
       - run: |
           gcloud run services update krew-review-agent \
             --region ${{ vars.GCP_REGION }} \
-            --image ${{ vars.AR_REPO }}/agent:latest
+            --image ${{ steps.build.outputs.image }}
 
   deploy-gateway:
     needs: changes
@@ -80,10 +83,13 @@ jobs:
           service_account: ${{ vars.GCP_DEPLOY_SA }}
       - uses: google-github-actions/setup-gcloud@e427ad8a34f8676edf47cf7d7925499adf3eb74f
       - run: gcloud auth configure-docker ${{ vars.AR_REGISTRY }}
-      - env:
+      - id: build
+        env:
           KO_DOCKER_REPO: ${{ vars.AR_REPO }}/gateway
-        run: ko build --bare --tags=latest ./cmd/gateway
+        run: |
+          image=$(ko build --bare --tags=${{ github.sha }},latest ./cmd/gateway)
+          echo "image=$image" >> "$GITHUB_OUTPUT"
       - run: |
           gcloud run services update krew-review-event-gateway \
             --region ${{ vars.GCP_REGION }} \
-            --image ${{ vars.AR_REPO }}/gateway:latest
+            --image ${{ steps.build.outputs.image }}
