@@ -33,9 +33,9 @@ func VerifySignature(secret, body []byte, signatureHeader string) bool {
 // webhookPayload is the minimal subset of a GitHub pull_request webhook payload
 // extracted by the gateway (EVENT_GATEWAY.md §4 Step 4).
 type webhookPayload struct {
-	Action      string        `json:"action"`
-	Repository  repoPayload   `json:"repository"`
-	PullRequest prPayload     `json:"pull_request"`
+	Action      string      `json:"action"`
+	Repository  repoPayload `json:"repository"`
+	PullRequest prPayload   `json:"pull_request"`
 }
 
 type repoPayload struct {

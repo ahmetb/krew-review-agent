@@ -73,8 +73,8 @@ type Config struct {
 
 // Agent runs a single review.
 type Agent struct {
-	cfg     Config
-	logger  *slog.Logger
+	cfg      Config
+	logger   *slog.Logger
 	fallback string
 }
 

@@ -63,7 +63,7 @@ type fakeTool struct {
 	called   int
 }
 
-func (f *fakeTool) Name() string { return f.name }
+func (f *fakeTool) Name() string   { return f.name }
 func (f *fakeTool) Terminal() bool { return f.terminal }
 func (f *fakeTool) Run(ctx context.Context, args string, dryRun bool) (string, error) {
 	f.called++

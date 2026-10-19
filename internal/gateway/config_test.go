@@ -40,11 +40,11 @@ func TestLoadDefaults(t *testing.T) {
 
 func TestLoadOverrides(t *testing.T) {
 	cfg, err := Load(getenvFrom(map[string]string{
-		"PORT":                       "9000",
-		"GITHUB_WEBHOOK_SECRET":      "s",
+		"PORT":                         "9000",
+		"GITHUB_WEBHOOK_SECRET":        "s",
 		"DISABLE_WEBHOOK_VERIFICATION": "true",
-		"GCP_PROJECT_ID":             "proj",
-		"PUBSUB_TOPIC":               "events",
+		"GCP_PROJECT_ID":               "proj",
+		"PUBSUB_TOPIC":                 "events",
 	}))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)

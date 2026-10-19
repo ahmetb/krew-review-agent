@@ -23,8 +23,8 @@ const (
 // the LLM) so the attribution is deterministic.
 const botSignatureFooter = `
 
-<sup> :robot: *This comment is an automatic review provided by [` + "`krew-review-agent`" + `](https://github.com/ahmetb/krew-review-agent).
-If you see a problem with this, please file an issue.* :robot: </sup>`
+<sup> :robot: *This comment is an automatic review provided by [` + "`krew-review-agent`" + `](https://github.com/ahmetb/krew-review-agent). ` +
+	`If you see a problem with this, please file an issue.* :robot: </sup>`
 
 // SubmitReview implements the submit_review_comment terminal tool.
 type SubmitReview struct {
@@ -44,8 +44,8 @@ func NewSubmitReview(gh GitHubClient, rc ReviewContext, out io.Writer, logger *s
 	return &SubmitReview{gh: gh, rc: rc, out: out, logger: logger}
 }
 
-func (t *SubmitReview) Name() string    { return "submit_review_comment" }
-func (t *SubmitReview) Terminal() bool  { return true }
+func (t *SubmitReview) Name() string   { return "submit_review_comment" }
+func (t *SubmitReview) Terminal() bool { return true }
 
 // Run posts the comment (production) or intercepts and prints it (dry-run).
 // When needs_human_review is true, it also adds the "needs-human-review" label
@@ -57,8 +57,8 @@ func (t *SubmitReview) Terminal() bool  { return true }
 // design/AGENT_CLI.md §14.
 func (t *SubmitReview) Run(ctx context.Context, args string, dryRun bool) (string, error) {
 	var p struct {
-		Body              string `json:"body"`
-		NeedsHumanReview bool  `json:"needs_human_review"`
+		Body             string `json:"body"`
+		NeedsHumanReview bool   `json:"needs_human_review"`
 	}
 	if err := json.Unmarshal([]byte(args), &p); err != nil {
 		return "", fmt.Errorf("parsing submit_review_comment args: %w", err)

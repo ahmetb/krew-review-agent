@@ -59,8 +59,8 @@ type fakeTool struct {
 	lastDry  bool
 }
 
-func (f *fakeTool) Name() string    { return f.name }
-func (f *fakeTool) Terminal() bool  { return f.terminal }
+func (f *fakeTool) Name() string   { return f.name }
+func (f *fakeTool) Terminal() bool { return f.terminal }
 func (f *fakeTool) Run(ctx context.Context, args string, dryRun bool) (string, error) {
 	f.calls++
 	f.lastArgs = args
@@ -109,7 +109,7 @@ func TestRunTerminalSubmitReview(t *testing.T) {
 	submit := &fakeTool{name: llm.ToolSubmitReviewComment, terminal: true, result: "posted"}
 	r := tools.NewRegistry(submit)
 	m := &mockLLM{responses: []llm.Response{{
-		ToolCalls: []llm.ToolCall{toolCall("c1", llm.ToolSubmitReviewComment, `{"body":"hi"}`)},
+		ToolCalls:    []llm.ToolCall{toolCall("c1", llm.ToolSubmitReviewComment, `{"body":"hi"}`)},
 		FinishReason: "tool_calls",
 	}}}
 	ag := New(baseCfg(m, r))
@@ -238,7 +238,7 @@ func TestRunCircuitBreakerThenTerminal(t *testing.T) {
 	fetch := &fakeTool{name: llm.ToolFetchPRDiff, result: "d"}
 	r := tools.NewRegistry(fetch, submit)
 	m := &mockLLM{responses: []llm.Response{
-		{ToolCalls: []llm.ToolCall{toolCall("c1", llm.ToolFetchPRDiff, "{}")}},                            // iter 1
+		{ToolCalls: []llm.ToolCall{toolCall("c1", llm.ToolFetchPRDiff, "{}")}},                       // iter 1
 		{ToolCalls: []llm.ToolCall{toolCall("c2", llm.ToolSubmitReviewComment, `{"body":"final"}`)}}, // circuit breaker
 	}}
 	cfg := baseCfg(m, r)
@@ -284,8 +284,8 @@ func TestRunCircuitBreakerFallbackDryRun(t *testing.T) {
 		t.Errorf("submit called %d, want 1 (fallback)", submit.calls)
 	}
 	var fb struct {
-		Body              string `json:"body"`
-		NeedsHumanReview bool  `json:"needs_human_review"`
+		Body             string `json:"body"`
+		NeedsHumanReview bool   `json:"needs_human_review"`
 	}
 	if err := json.Unmarshal([]byte(submit.lastArgs), &fb); err != nil {
 		t.Fatalf("fallback args not json: %v", err)

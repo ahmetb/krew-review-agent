@@ -14,9 +14,9 @@ func getenvFrom(m map[string]string) func(string) (string, bool) {
 
 func TestLoadDefaults(t *testing.T) {
 	cfg, err := Load(getenvFrom(map[string]string{
-		"GITHUB_TOKEN":  "ghp_x",
-		"LLM_API_KEY":   "k",
-		"LLM_BASE_URL":  "https://gw",
+		"GITHUB_TOKEN": "ghp_x",
+		"LLM_API_KEY":  "k",
+		"LLM_BASE_URL": "https://gw",
 	}))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)

@@ -26,8 +26,8 @@ func NewFetchPRDiff(gh GitHubClient, rc ReviewContext) *FetchPRDiff {
 	return &FetchPRDiff{gh: gh, rc: rc}
 }
 
-func (t *FetchPRDiff) Name() string    { return "fetch_pr_diff" }
-func (t *FetchPRDiff) Terminal() bool  { return false }
+func (t *FetchPRDiff) Name() string   { return "fetch_pr_diff" }
+func (t *FetchPRDiff) Terminal() bool { return false }
 
 // Run fetches the raw PR diff. dryRun is irrelevant (read-only).
 func (t *FetchPRDiff) Run(ctx context.Context, args string, dryRun bool) (string, error) {

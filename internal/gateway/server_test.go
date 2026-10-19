@@ -96,8 +96,8 @@ func TestValidPROpenedPublishedReturns200(t *testing.T) {
 	s := New(testDeps(t, pub, false), ":0")
 
 	headers := map[string]string{
-		"X-GitHub-Event":    "pull_request",
-		"X-GitHub-Delivery": "del-123",
+		"X-GitHub-Event":      "pull_request",
+		"X-GitHub-Delivery":   "del-123",
 		"X-Hub-Signature-256": signBody("test-secret", validPROpenedBody),
 	}
 	rr := doRequest(t, s, http.MethodPost, "/webhook", validPROpenedBody, headers)
@@ -114,8 +114,8 @@ func TestPublishReceivesCorrectDataAndAttributes(t *testing.T) {
 	s := New(testDeps(t, pub, false), ":0")
 
 	headers := map[string]string{
-		"X-GitHub-Event":    "pull_request",
-		"X-GitHub-Delivery": "del-456",
+		"X-GitHub-Event":      "pull_request",
+		"X-GitHub-Delivery":   "del-456",
 		"X-Hub-Signature-256": signBody("test-secret", validPROpenedBody),
 	}
 	doRequest(t, s, http.MethodPost, "/webhook", validPROpenedBody, headers)

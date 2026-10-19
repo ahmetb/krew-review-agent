@@ -95,7 +95,9 @@ func doRequest(t *testing.T, s *Server, method, path string, body string, header
 
 func TestHandlerReviewSubmittedReturns200(t *testing.T) {
 	td := newTestDeps(t,
-		func(w http.ResponseWriter, r *http.Request) { w.Write(llmCompletion("submit_review_comment", `{"body":"approved"}`)) },
+		func(w http.ResponseWriter, r *http.Request) {
+			w.Write(llmCompletion("submit_review_comment", `{"body":"approved"}`))
+		},
 		func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusCreated) },
 	)
 	s := New(td.deps, ":0")
@@ -115,7 +117,9 @@ func TestHandlerReviewSubmittedReturns200(t *testing.T) {
 
 func TestHandlerWrappedPubSubEnvelope(t *testing.T) {
 	td := newTestDeps(t,
-		func(w http.ResponseWriter, r *http.Request) { w.Write(llmCompletion("noop", `{"reason":"no plugins"}`)) },
+		func(w http.ResponseWriter, r *http.Request) {
+			w.Write(llmCompletion("noop", `{"reason":"no plugins"}`))
+		},
 		nil,
 	)
 	s := New(td.deps, ":0")
@@ -222,7 +226,9 @@ func TestHandlerLLMErrorReturns500(t *testing.T) {
 
 func TestHandlerCommentPostFailureReturns500(t *testing.T) {
 	td := newTestDeps(t,
-		func(w http.ResponseWriter, r *http.Request) { w.Write(llmCompletion("submit_review_comment", `{"body":"x"}`)) },
+		func(w http.ResponseWriter, r *http.Request) {
+			w.Write(llmCompletion("submit_review_comment", `{"body":"x"}`))
+		},
 		func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusServiceUnavailable) },
 	)
 	s := New(td.deps, ":0")

@@ -11,12 +11,12 @@ import (
 
 // stubGH is a test double for GitHubClient.
 type stubGH struct {
-	diff      string
-	diffErr   error
-	posted    string
-	postErr   error
-	labels    []string
-	labelErr  error
+	diff     string
+	diffErr  error
+	posted   string
+	postErr  error
+	labels   []string
+	labelErr error
 }
 
 func (s *stubGH) FetchPRDiff(ctx context.Context, owner, repo string, pr int) (string, error) {

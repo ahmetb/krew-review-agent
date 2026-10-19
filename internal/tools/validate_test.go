@@ -12,18 +12,18 @@ func TestValidatePluginName(t *testing.T) {
 		}
 	}
 	invalid := []string{
-		"",                                  // empty
-		"Kube-foo",                          // uppercase
-		"foo_bar",                           // underscore
-		"foo/bar",                           // path separator
-		"..",                                // traversal
-		"foo..bar",                          // double dot
-		"foo bar",                           // space
-		"-foo",                              // leading hyphen
-		"foo-",                              // trailing hyphen
-		"foo--bar",                          // double hyphen
-		"Whoami",                            // uppercase
-		"foo.yaml",                          // dot
+		"",         // empty
+		"Kube-foo", // uppercase
+		"foo_bar",  // underscore
+		"foo/bar",  // path separator
+		"..",       // traversal
+		"foo..bar", // double dot
+		"foo bar",  // space
+		"-foo",     // leading hyphen
+		"foo-",     // trailing hyphen
+		"foo--bar", // double hyphen
+		"Whoami",   // uppercase
+		"foo.yaml", // dot
 	}
 	for _, n := range invalid {
 		if err := ValidatePluginName(n); err == nil {

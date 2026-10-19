@@ -11,21 +11,21 @@ import (
 
 // Config holds all runtime settings for the agent binary.
 type Config struct {
-	GitHubToken  string
-	LLMAPIKey    string
-	LLMBaseURL   string
-	LLMModel     string
+	GitHubToken   string
+	LLMAPIKey     string
+	LLMBaseURL    string
+	LLMModel      string
 	MaxIterations int
-	LogLevel     string
-	Port         int
+	LogLevel      string
+	Port          int
 }
 
 // Defaults applied when the corresponding env var is unset.
 const (
-	DefaultLLMModel     = "glm-5.2"
-	DefaultMaxIter      = 10
-	DefaultLogLevel     = "INFO"
-	DefaultPort         = 8080
+	DefaultLLMModel = "glm-5.2"
+	DefaultMaxIter  = 10
+	DefaultLogLevel = "INFO"
+	DefaultPort     = 8080
 )
 
 // Load reads configuration using getenv (typically os.LookupEnv). Required

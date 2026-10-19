@@ -16,14 +16,14 @@ import (
 // ReviewContext carries the per-PR fields that side-effecting and
 // data-gathering tools need (owner/repo/number for API calls).
 type ReviewContext struct {
-	Owner   string
-	Repo    string
+	Owner    string
+	Repo     string
 	PRNumber int
-	Title   string
-	Body    string
-	Author  string
-	HeadSHA string
-	Action  string
+	Title    string
+	Body     string
+	Author   string
+	HeadSHA  string
+	Action   string
 }
 
 // PRRef returns the canonical "{owner}/{repo}#{number}" reference for logging.

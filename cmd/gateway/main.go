@@ -25,9 +25,9 @@ import (
 
 // Exit code constants.
 const (
-	exitOK       = 0
-	exitFailure  = 1
-	exitConfig   = 2
+	exitOK      = 0
+	exitFailure = 1
+	exitConfig  = 2
 )
 
 func main() {
